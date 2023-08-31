@@ -45,3 +45,5 @@ bui自然要尽快去吃喝玩乐，那么怎么能尽快的到达城市H呢？�
 这就是跳表最朴素的想法(really pretty simple👏 so young so naive.)
 
 {% asset_img analysis_of_two_linked_lists.png  %}
+
+![2023-08-31T105857](2023-08-31T105857.png)
