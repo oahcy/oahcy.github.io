@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>skiplist-intro | oahcy&#39;s blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="skiplist，即跳表是由William Pugh在1989年发明的，允许快速查询一个有序连续元素的数据链表，搜索、插入、删除的平均时间复杂度均为O(lgn)。 本文介绍下对于skiplist的理解，包括背景、推导过程、伪代码以及复杂度的证明。 1.背景有序数组的好处是可以通过二分实现O(lgn)的高效查找，然而插入元素时，为了保证有序性，时间复杂度是O(n)的。链表则刚好相反，插入数据是O(1">
+<meta property="og:type" content="article">
+<meta property="og:title" content="skiplist-intro">
+<meta property="og:url" content="https://oahcy.github.io/2023/08/31/skiplist-intro/index.html">
+<meta property="og:site_name" content="oahcy&#39;s blog">
+<meta property="og:description" content="skiplist，即跳表是由William Pugh在1989年发明的，允许快速查询一个有序连续元素的数据链表，搜索、插入、删除的平均时间复杂度均为O(lgn)。 本文介绍下对于skiplist的理解，包括背景、推导过程、伪代码以及复杂度的证明。 1.背景有序数组的好处是可以通过二分实现O(lgn)的高效查找，然而插入元素时，为了保证有序性，时间复杂度是O(n)的。链表则刚好相反，插入数据是O(1">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://oahcy.github.io/2023/08/31/skiplist-intro/analysis_of_two_linked_lists.png">
+<meta property="og:image" content="https://oahcy.github.io/2023-08-31T105857.png">
+<meta property="article:published_time" content="2023-08-31T02:32:30.000Z">
+<meta property="article:modified_time" content="2023-08-31T03:00:01.728Z">
+<meta property="article:author" content="oahcy">
+<meta property="article:tag" content="skiplist">
+<meta property="article:tag" content="leveldb">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://oahcy.github.io/2023/08/31/skiplist-intro/analysis_of_two_linked_lists.png">
+  
+    <link rel="alternate" href="/atom.xml" title="oahcy's blog" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">oahcy&#39;s blog</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://oahcy.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-skiplist-intro" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2023/08/31/skiplist-intro/" class="article-date">
+  <time class="dt-published" datetime="2023-08-31T02:32:30.000Z" itemprop="datePublished">2023-08-31</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      skiplist-intro
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>skiplist，即跳表是由William Pugh在1989年发明的，允许快速查询一个有序连续元素的数据链表，搜索、插入、删除的平均时间复杂度均为O(lgn)。</p>
+<p>本文介绍下对于skiplist的理解，包括背景、推导过程、伪代码以及复杂度的证明。</p>
+<h1 id="1-背景"><a href="#1-背景" class="headerlink" title="1.背景"></a>1.背景</h1><p>有序数组的好处是可以通过二分实现O(lgn)的高效查找，然而插入元素时，为了保证有序性，时间复杂度是O(n)的。链表则刚好相反，插入数据是O(1)，查找元素则是O(n)的。即使链表数据是有序的，查找元素仍然是O(n)的，因为本质上，链表不支持random access.</p>
+<p>那么，是否存在一种链表，既支持高效的数据插入，又可以实现高效的查找？</p>
+<p>介绍skiplist前，我们先举一个坐火车的例子。</p>
+<p>假设公司组织出去bui，我们居住在城市A，想要到城市H去，其中城市A到H有两趟车：</p>
+<p>一趟慢车：</p>
+<p><code>A -&gt; B -&gt; C -&gt; D -&gt; E -&gt; F -&gt; G -&gt; H -&gt; I -&gt; J -&gt; K -&gt; L -&gt; M -&gt; N</code></p>
+<p>此外还有一趟快车，经过H的上个城市G</p>
+<p><code>A -&gt; C -&gt; E -&gt; G -&gt; I -&gt; K -&gt; M</code></p>
+<p>bui自然要尽快去吃喝玩乐，那么怎么能尽快的到达城市H呢？很直观的，我们会这么选择</p>
+<ul>
+<li>先乘坐快车 A -&gt; C -&gt; E -&gt; G</li>
+<li>再乘坐慢车 G -&gt; H</li>
+</ul>
+<p>假设把火车的路线想象为一个链表，那么这个链表明显是有序的，每个城市都是链表上一个节点，去到城市H相当于找到H这个节点，可以看到：</p>
+<p><strong>通过乘坐快车，我们能够更快的开始bui</strong></p>
+<p>即</p>
+<p><strong>通过使用数据量更少（子集）的辅助有序链表，我们能够实现更快速的查找</strong></p>
+<p>这就是跳表最朴素的想法(really pretty simple👏 so young so naive.)</p>
+<img src="/2023/08/31/skiplist-intro/analysis_of_two_linked_lists.png" class="">
+
+<p><img src="/2023-08-31T105857.png" alt="2023-08-31T105857"></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://oahcy.github.io/2023/08/31/skiplist-intro/" data-id="cllyl44ke0001pkulgm4dfpy7" data-title="skiplist-intro" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/leveldb/" rel="tag">leveldb</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/skiplist/" rel="tag">skiplist</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2023/08/31/hello-world/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Hello World</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/leveldb/" rel="tag">leveldb</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/skiplist/" rel="tag">skiplist</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/leveldb/" style="font-size: 10px;">leveldb</a> <a href="/tags/skiplist/" style="font-size: 10px;">skiplist</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/08/">August 2023</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2023/08/31/skiplist-intro/">skiplist-intro</a>
+          </li>
+        
+          <li>
+            <a href="/2023/08/31/hello-world/">Hello World</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2023 oahcy<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
